@@ -1,18 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Casse-brique en JavaScript</title>
-  <style>
-    svg {
-      border: 1px solid black;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>Casse-brique</title>
 </head>
 <body>
-  <svg id="game" width="600" height="400"></svg>
-
+  <svg id="game" width="600" height="400">
+  </svg>
   <script>
-    // Créer une classe Brick pour représenter les briques
+    // Définir une classe Brick pour représenter les briques du jeu
     function Brick(x, y, width, height, color) {
       this.x = x;
       this.y = y;
@@ -28,7 +24,7 @@
       document.getElementById("game").appendChild(this.svgElement);
     }
 
-    // Créer une classe Ball pour représenter la balle
+    // Définir une classe Ball pour représenter la balle du jeu
     function Ball(x, y, radius, color) {
       this.x = x;
       this.y = y;
@@ -42,7 +38,7 @@
       document.getElementById("game").appendChild(this.svgElement);
     }
 
-    // Créer une classe Paddle pour représenter la raquette
+    // Définir une classe Paddle pour représenter la raquette du jeu
     function Paddle(x, y, width, height, color) {
       this.x = x;
       this.y = y;
@@ -56,78 +52,91 @@
       this.svgElement.setAttribute("height", this.height);
       this.svgElement.setAttribute("fill", this.color);
       document.getElementById("game").appendChild(this.svgElement);
+
+      // Ajouter une méthode move pour déplacer la raquette en réponse aux mouvements de souris
+      this.move = function(event) {
+        var gameRect = document.getElementById("game").getBoundingClientRect();
+        this.x = event.clientX - gameRect.left - this.width / 2;
+        if (this.x < 0) {
+          this.x = 0;
+        }
+        if (this.x + this.width > gameRect.width) {
+          this.x = gameRect.width - this.width;
+        }
+        this.svgElement.setAttribute("x", this.x);
+      };
     }
 
-    // Créer une fonction pour déplacer la raquette en réponse aux événements utilisateur
-    Paddle.prototype.move = function(event) {
-      var x = event.clientX - document.getElementById("game").getBoundingClientRect().left - this.width/2;
-      if (x < 0) {
-        x = 0;
-      }
-      if (x > document.getElementById("game").getAttribute("width") - this.width) {
-        x = document.getElementById("game").getAttribute("width") - this.width;
-      }
-      this.x = x;
-      this.svgElement.setAttribute("x", this.x);
-    };
+    // Définir une fonction animateBall pour animer la balle
+function animateBall(ball, dx, dy, bricks, paddle) {
+  ball.x += dx;
+  ball.y += dy;
+  ball.svgElement.setAttribute("cx", ball.x);
+  ball.svgElement.setAttribute("cy", ball.y);
 
-    // Créer une fonction pour animer la balle et la faire rebondir sur les bords du jeu
-    function animateBall(ball, dx, dy, bricks, paddle) {
-      ball.x += dx;
-      ball.y += dy;
-      ball.svgElement.setAttribute("cx", ball.x);
-      ball.svgElement.setAttribute("cy", ball.y);
-      if (ball.x - ball.radius < 0 || ball.x + ball.radius > document.getElementById("game").getAttribute("width")) {
-       
-        dx = -dx;
+  if (ball.x - ball.radius < 0 || ball.x + ball.radius > 600) {
+    dx = -dx;
   }
   if (ball.y - ball.radius < 0) {
     dy = -dy;
-  } else if (ball.y + ball.radius > document.getElementById("game").getAttribute("height")) {
+  } else if (ball.y + ball.radius > 400) {
     alert("Perdu !");
-    clearInterval(intervalId);
-  } else if (ball.y + ball.radius > paddle.y && ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
-    dy = -dy;
-  } else {
-    for (var i = 0; i < bricks.length; i++) {
-      if (ball.y - ball.radius < bricks[i].y + bricks[i].height && ball.x > bricks[i].x && ball.x < bricks[i].x + bricks[i].width) {
-        dy = -dy;
-        document.getElementById("game").removeChild(bricks[i].svgElement);
-        bricks.splice(i, 1);
-        if (bricks.length === 0) {
-          alert("Gagné !");
-          clearInterval(intervalId);
-        }
-        break;
-      }
+    document.location.reload();
+  }
+
+  // Vérifier si la balle touche une brique
+  for (var i = 0; i < bricks.length; i++) {
+    if (ball.x + ball.radius > bricks[i].x && ball.x - ball.radius < bricks[i].x + bricks[i].width &&
+        ball.y + ball.radius > bricks[i].y && ball.y - ball.radius < bricks[i].y + bricks[i].height) {
+      dy = -dy;
+      bricks[i].svgElement.parentNode.removeChild(bricks[i].svgElement);
+      bricks.splice(i, 1);
     }
   }
-  return [dx, dy];
+
+  // Vérifier si la balle touche la raquette
+  if (ball.x + ball.radius > paddle.x && ball.x - ball.radius < paddle.x + paddle.width &&
+      ball.y + ball.radius > paddle.y && ball.y - ball.radius < paddle.y + paddle.height) {
+    dy = -dy;
+  }
+
+  // Mettre à jour la position de la raquette
+  paddle.move = function(event) {
+    var gameRect = document.getElementById("game").getBoundingClientRect();
+    this.x = event.clientX - gameRect.left - this.width / 2;
+    if (this.x < 0) {
+      this.x = 0;
+    }
+    if (this.x + this.width > gameRect.width) {
+      this.x = gameRect.width - this.width;
+    }
+    this.svgElement.setAttribute("x", this.x);
+  };
+
+  // Répéter l'animation à l'aide de la fonction requestAnimationFrame
+  window.requestAnimationFrame(function() {
+    animateBall(ball, dx, dy, bricks, paddle);
+  });
 }
 
-// Initialiser le jeu
+// Créer les éléments de jeu
+var ball = new Ball(300, 200, 10, "red");
+var paddle = new Paddle(250, 380, 100, 20, "blue");
 var bricks = [];
 for (var i = 0; i < 6; i++) {
   for (var j = 0; j < 10; j++) {
-    bricks.push(new Brick(j * 60, i * 20 + 50, 60, 20, "red"));
+    var brick = new Brick(j * 60, i * 20, 50, 15, "green");
+    bricks.push(brick);
   }
 }
-var ball = new Ball(300, 200, 10, "blue");
-var paddle = new Paddle(270, 380, 60, 10, "green");
 
-// Ajouter des événements pour déplacer la raquette en réponse aux mouvements de souris
+// Démarrer l'animation de la balle
+animateBall(ball, 2, -2, bricks, paddle);
+
+// Ajouter un gestionnaire d'événements pour les mouvements de la souris
 document.addEventListener("mousemove", function(event) {
   paddle.move(event);
 });
-
-// Animer le jeu
-var intervalId = setInterval(function() {
-  var dx = 5;
-  var dy = -5;
-  var velocities = animateBall(ball, dx, dy, bricks, paddle);
-  dx = velocities[0];
-  dy = velocities[1];
-}, 50);
 </script>
 </body>
 </html>
